@@ -43,7 +43,34 @@ CogniGen is organized as a REST API that keeps user, book, quiz, and response me
 
 ```bash
 pip install -r requirements.txt
+copy .env.example .env
 uvicorn app.main:app --reload
 ```
 
-Create a local `.env` file for secrets and API keys. Do not commit `.env`.
+Update `.env` with your local PostgreSQL connection string and API keys before starting the server. Do not commit `.env`.
+
+The API runs at `http://localhost:8000` by default, and the interactive FastAPI docs are available at `http://localhost:8000/docs`.
+
+## Configuration
+
+| Variable | Purpose |
+| --- | --- |
+| `DATABASE_URL` | PostgreSQL connection string used by SQLAlchemy. |
+| `SECRET_KEY` | JWT signing secret for access tokens. |
+| `GROQ_API_KEY` | LLM provider key for chat, generation, and grading flows. |
+| `GEMINI_API_KEY` | Google Gemini key for embeddings and evaluation support. |
+
+## Core API Surface
+
+| Method | Endpoint | Purpose |
+| --- | --- | --- |
+| `POST` | `/api/v1/signup` | Register a teacher/user account. |
+| `POST` | `/token` | Issue a JWT access token. |
+| `POST` | `/api/v1/books/upload` | Upload zipped learning material for processing. |
+| `GET` | `/api/v1/books` | List uploaded books for the authenticated user. |
+| `POST` | `/api/v1/chat` | Ask questions across selected uploaded books. |
+| `POST` | `/api/v1/generate-questions-from-book` | Generate assessment questions from retrieved source context. |
+| `POST` | `/api/v1/quizzes` | Create a quiz from generated questions. |
+| `GET` | `/api/v1/quizzes/{quiz_id}` | Open a quiz for student access. |
+| `POST` | `/api/v1/quizzes/{quiz_id}/submit` | Submit student quiz answers. |
+| `GET` | `/api/v1/quizzes/{quiz_id}/results` | View quiz responses and scores. |
