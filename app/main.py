@@ -17,16 +17,23 @@ from typing import List
 models.Base.metadata.create_all(bind=engine)
 app = FastAPI(title="CogniGen API", version="1.0")
 
-# --- CORS Middleware ---
-origins = ["http://localhost:3000"]
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+app = FastAPI()
+
+# --- SECURITY CLEARANCE (CORS) ---
+# For now, we allow '*' (everything) so the deployment doesn't block your frontend.
+# Once your frontend is live, we will lock this down to just your Vercel URL.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=["*"], 
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+# ... rest of your backend routes go below here
 # --- Dependencies ---
 def get_db():
     db = SessionLocal()
@@ -209,15 +216,20 @@ async def generate_questions_from_book(
     current_user: models.User = Depends(get_current_user)
 ):
     # 1. Retrieve source documents
-    context_embedding = book_processor.embeddings.embed_query(request.context)
-    retrieved_docs = book_processor.chroma_collection.query(
-        query_embeddings=[context_embedding],
-        n_results=10, 
-        where={"book_id": {"$in": [str(bid) for bid in request.book_ids]}}
+    
+    # 1. Retrieve source documents using Pinecone Similarity Search
+    # Pinecone/LangChain handles the embedding step for us implicitly during search
+    filter_dict = {"book_id": {"$in": [str(bid) for bid in request.book_ids]}}
+    
+    raw_docs = book_processor.vectorstore.similarity_search(
+        query=request.context, 
+        k=10, 
+        filter=filter_dict
     )
-
-    documents = retrieved_docs['documents'][0]
-    metadatas = retrieved_docs['metadatas'][0]
+    
+    # Restructure back into the format your existing pipeline expects
+    documents = [doc.page_content for doc in raw_docs]
+    metadatas = [doc.metadata for doc in raw_docs]
     
     final_questions_list = []
 
